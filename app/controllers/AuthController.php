@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../helpers/JWT.php';
+require_once __DIR__ . '/../helpers/Response.php';
 
 
 class AuthController
@@ -16,48 +17,29 @@ class AuthController
     /**
      * POST /api/register
      */
-    public function register()
-    {
-        $data = $GLOBALS['request_body'] ?? [];
+public function register()
+{
+    $data = $GLOBALS['request_body'] ?? [];
 
-        if (
-            empty($data['name']) ||
-            empty($data['email']) ||
-            empty($data['password'])
-        ) {
-            http_response_code(422);
-            echo json_encode([
-                "status" => false,
-                "message" => "All fields are required"
-            ]);
-            return;
-        }
-
-        if ($this->user->findByEmail($data['email'])) {
-            http_response_code(409);
-            echo json_encode([
-                "status" => false,
-                "message" => "Email already exists"
-            ]);
-            return;
-        }
-
-        $hashedPassword = password_hash(
-            $data['password'],
-            PASSWORD_DEFAULT
-        );
-
-        $this->user->create(
-            $data['name'],
-            $data['email'],
-            $hashedPassword
-        );
-
-        echo json_encode([
-            "status" => true,
-            "message" => "User registered successfully"
-        ]);
+    if (empty($data['name']) || empty($data['email']) || empty($data['password'])) {
+        Response::error("All fields are required", 422);
     }
+
+    if ($this->user->findByEmail($data['email'])) {
+        Response::error("Email already exists", 409);
+    }
+
+    $hashedPassword = password_hash($data['password'], PASSWORD_DEFAULT);
+
+    $this->user->create(
+        $data['name'],
+        $data['email'],
+        $hashedPassword
+    );
+
+    Response::success("User registered successfully", null, 201);
+}
+
 
     /**
      * POST /api/login
@@ -66,41 +48,31 @@ public function login()
 {
     $data = $GLOBALS['request_body'] ?? [];
 
-    if (
-        empty($data['email']) ||
-        empty($data['password'])
-    ) {
-        http_response_code(422);
-        echo json_encode([
-            "status" => false,
-            "message" => "Email and password required"
-        ]);
-        return;
+    if (empty($data['email']) || empty($data['password'])) {
+        Response::error("Email and password required", 422);
     }
 
     $user = $this->user->findByEmail($data['email']);
 
     if (!$user || !password_verify($data['password'], $user['password'])) {
-        http_response_code(401);
-        echo json_encode([
-            "status" => false,
-            "message" => "Invalid credentials"
-        ]);
-        return;
+        Response::error("Invalid credentials", 401);
     }
 
-    // 🔐 Generate JWT
-    $token = JWT::encode([
-        "user_id" => $user['id'],
-        "email"   => $user['email']
-    ]);
+    $payload = [
+        'user_id' => $user['id'],
+        'email'   => $user['email'],
+        'iat'     => time(),
+        'exp'     => time() + $_ENV['JWT_EXPIRY']
+    ];
 
-    echo json_encode([
-        "status" => true,
-        "message" => "Login successful",
+    $token = JWT::encode($payload);
+
+    Response::success("Login successful", [
         "token" => $token,
         "expires_in" => (int) $_ENV['JWT_EXPIRY']
     ]);
 }
+
+
 
 }

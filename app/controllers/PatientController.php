@@ -1,6 +1,9 @@
 <?php
 
 require_once __DIR__ . '/../models/Patient.php';
+require_once __DIR__ . '/../helpers/Response.php';
+require_once __DIR__ . '/../helpers/Validator.php';
+require_once __DIR__ . '/../helpers/Logger.php';
 
 class PatientController
 {
@@ -13,56 +16,62 @@ class PatientController
 
     public function index()
     {
-        echo json_encode([
-            "status" => true,
-            "data" => $this->patient->getAll()
-        ]);
+        $patients = $this->patient->getAll();
+        Response::success("Patients fetched successfully", $patients);
     }
 
-    public function store()
-    {
-        $data = $GLOBALS['request_body'] ?? [];
+public function store()
+{
+    $data = $GLOBALS['request_body'] ?? [];
 
-        if (
-            empty($data['name']) ||
-            empty($data['age']) ||
-            empty($data['gender'])
-        ) {
-            http_response_code(422);
-            echo json_encode([
-                "status" => false,
-                "message" => "Required fields missing"
-            ]);
-            return;
-        }
+    Validator::validatePatient($data);
 
-        $this->patient->create($data);
+    $this->patient->create($data);
 
-        echo json_encode([
-            "status" => true,
-            "message" => "Patient created successfully"
-        ]);
+    $user = $GLOBALS['auth_user']['user_id'] ?? 'unknown';
+
+    Logger::audit("User {$user} created patient: {$data['name']}");
+
+    Response::success("Patient created successfully", null, 201);
+}
+
+
+
+
+public function update($id)
+{
+    if (!is_numeric($id)) {
+        Response::error("Invalid patient ID", 400);
     }
 
-    public function update($id)
-    {
-        $data = $GLOBALS['request_body'] ?? [];
+    $data = $GLOBALS['request_body'] ?? [];
 
-        $this->patient->update((int)$id, $data);
+    Validator::validatePatient($data, true);
 
-        echo json_encode([
-            "status" => true,
-            "message" => "Patient updated successfully"
-        ]);
+    $this->patient->update((int)$id, $data);
+
+    $user = $GLOBALS['auth_user']['user_id'] ?? 'unknown';
+
+    Logger::audit("User {$user} updated patient ID: {$id}");
+
+    Response::success("Patient updated successfully");
+}
+
+
+public function destroy($id)
+{
+    if (!is_numeric($id)) {
+        Response::error("Invalid patient ID", 400);
     }
 
-    public function destroy($id)
-    {
-        $this->patient->delete((int)$id);
+    $this->patient->delete((int)$id);
 
-        echo json_encode([
-            "status" => true,
-            "message" => "Patient deleted successfully"
-        ]);
-    }
+    $user = $GLOBALS['auth_user']['user_id'] ?? 'unknown';
+
+    Logger::audit("User {$user} deleted patient ID: {$id}");
+
+    Response::success("Patient deleted successfully");
+}
+
+
 }

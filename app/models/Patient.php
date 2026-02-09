@@ -11,56 +11,91 @@ class Patient
         $this->db = Database::connect();
     }
 
+    /* ============================
+       GET ALL PATIENTS
+    ============================ */
     public function getAll(): array
     {
-        $stmt = $this->db->query("SELECT * FROM patients");
-        return $stmt->fetchAll();
+        $stmt = $this->db->query("SELECT * FROM patients ORDER BY id DESC");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    /* ============================
+       CREATE PATIENT
+    ============================ */
     public function create(array $data): bool
     {
-        $stmt = $this->db->prepare(
-            "INSERT INTO patients (name, age, gender, phone, address)
-             VALUES (:name, :age, :gender, :phone, :address)"
-        );
+        $sql = "INSERT INTO patients (name, age, gender, phone, address)
+                VALUES (:name, :age, :gender, :phone, :address)";
 
-        return $stmt->execute([
-            'name'    => $data['name'],
-            'age'     => $data['age'],
-            'gender'  => $data['gender'],
-            'phone'   => $data['phone'],
-            'address' => $data['address']
-        ]);
+        $stmt = $this->db->prepare($sql);
+
+        $stmt->bindValue(':name', $data['name']);
+        $stmt->bindValue(':age', (int)$data['age'], PDO::PARAM_INT);
+        $stmt->bindValue(':gender', $data['gender']);
+        $stmt->bindValue(':phone', $data['phone'] ?? null);
+        $stmt->bindValue(':address', $data['address'] ?? null);
+
+        return $stmt->execute();
     }
 
+    /* ============================
+       UPDATE PATIENT (PARTIAL)
+    ============================ */
     public function update(int $id, array $data): bool
     {
-        $stmt = $this->db->prepare(
-            "UPDATE patients SET
-                name = :name,
-                age = :age,
-                gender = :gender,
-                phone = :phone,
-                address = :address
-             WHERE id = :id"
-        );
+        if (!$this->exists($id)) {
+            throw new Exception("Patient not found");
+        }
 
-        return $stmt->execute([
-            'id'      => $id,
-            'name'    => $data['name'],
-            'age'     => $data['age'],
-            'gender'  => $data['gender'],
-            'phone'   => $data['phone'],
-            'address' => $data['address']
-        ]);
+        $fields = [];
+        $params = [':id' => $id];
+
+        foreach (['name','age','gender','phone','address'] as $field) {
+            if (array_key_exists($field, $data)) {
+                $fields[] = "$field = :$field";
+                $params[":$field"] = $data[$field];
+            }
+        }
+
+        if (empty($fields)) {
+            throw new Exception("No fields provided for update");
+        }
+
+        $sql = "UPDATE patients SET " . implode(', ', $fields) . " WHERE id = :id";
+        $stmt = $this->db->prepare($sql);
+
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+
+        return $stmt->execute();
     }
 
+    /* ============================
+       DELETE PATIENT
+    ============================ */
     public function delete(int $id): bool
     {
-        $stmt = $this->db->prepare(
-            "DELETE FROM patients WHERE id = :id"
-        );
+        if (!$this->exists($id)) {
+            throw new Exception("Patient not found");
+        }
 
-        return $stmt->execute(['id' => $id]);
+        $stmt = $this->db->prepare("DELETE FROM patients WHERE id = :id");
+        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+
+        return $stmt->execute();
+    }
+
+    /* ============================
+       CHECK IF PATIENT EXISTS
+    ============================ */
+    private function exists(int $id): bool
+    {
+        $stmt = $this->db->prepare("SELECT id FROM patients WHERE id = :id");
+        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return (bool) $stmt->fetch();
     }
 }

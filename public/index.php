@@ -13,6 +13,10 @@
 
 require_once __DIR__ . '/../config/config.php';
 
+require_once __DIR__ . '/../app/helpers/ErrorHandler.php';
+
+set_exception_handler(['ErrorHandler', 'handleException']);
+
 /*
 |--------------------------------------------------------------------------
 | MIDDLEWARE
