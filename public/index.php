@@ -1,0 +1,129 @@
+<?php
+/**
+ * --------------------------------------------------
+ * SINGLE ENTRY POINT
+ * public/index.php
+ * --------------------------------------------------
+ * Handles:
+ * - Environment loading
+ * - Middleware
+ * - Routing
+ * - Controllers
+ */
+
+require_once __DIR__ . '/../config/config.php';
+
+/*
+|--------------------------------------------------------------------------
+| MIDDLEWARE
+|--------------------------------------------------------------------------
+*/
+require_once __DIR__ . '/../app/middleware/JsonMiddleware.php';
+require_once __DIR__ . '/../app/middleware/AuthMiddleware.php';
+
+JsonMiddleware::handle();
+
+/*
+|--------------------------------------------------------------------------
+| CORE
+|--------------------------------------------------------------------------
+*/
+require_once __DIR__ . '/../app/core/Router.php';
+
+$router = new Router();
+
+/*
+|--------------------------------------------------------------------------
+| CONTROLLERS
+|--------------------------------------------------------------------------
+*/
+require_once __DIR__ . '/../app/controllers/AuthController.php';
+require_once __DIR__ . '/../app/controllers/PatientController.php';
+
+$authController     = new AuthController();
+$patientController  = new PatientController();
+
+/*
+|--------------------------------------------------------------------------
+| AUTH ROUTES (PUBLIC)
+|--------------------------------------------------------------------------
+*/
+$router->add('POST', '/api/register', [$authController, 'register']);
+
+$router->add('POST', '/api/login', [$authController, 'login']);
+
+/*
+|--------------------------------------------------------------------------
+| PATIENT ROUTES (PROTECTED)
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * GET ALL PATIENTS
+ */
+$router->add('GET', '/api/patients', function () use ($patientController) {
+    AuthMiddleware::handle();
+    $patientController->index();
+});
+
+/**
+ * CREATE PATIENT
+ */
+$router->add('POST', '/api/patients', function () use ($patientController) {
+    AuthMiddleware::handle();
+    $patientController->store();
+});
+
+/**
+ * UPDATE PATIENT
+ * Example:
+ * PUT /api/patients/update?id=1
+ */
+$router->add('PUT', '/api/patients/{id}', function ($params) use ($patientController) {
+    AuthMiddleware::handle();
+
+    $id = $params['id'] ?? null;
+
+    if (!$id) {
+        http_response_code(400);
+        echo json_encode([
+            "status" => false,
+            "message" => "Patient ID is required"
+        ]);
+        return;
+    }
+    $patientController->update($params['id']);
+
+});
+
+/**
+ * DELETE PATIENT
+ * Example:
+ * DELETE /api/patients/delete?id=1
+ */
+$router->add('DELETE', '/api/patients/{id}', function ($params) use ($patientController) {
+    AuthMiddleware::handle();
+
+    $id = $params['id'] ?? null;
+
+    if (!$id) {
+        http_response_code(400);
+        echo json_encode([
+            "status" => false,
+            "message" => "Patient ID is required"
+        ]);
+        return;
+    }
+
+    $patientController->destroy($params['id']);
+});
+
+/*
+|--------------------------------------------------------------------------
+| DISPATCH REQUEST
+|--------------------------------------------------------------------------
+*/
+$router->dispatch(
+    $_SERVER['REQUEST_URI'],
+    $_SERVER['REQUEST_METHOD']
+);
