@@ -2,7 +2,7 @@
 
 class Router
 {
-    private array $routes = [];
+    private array $routes = [];//Routes Storage
 
     public function add(string $method, string $path, callable $handler)
     {
@@ -11,6 +11,8 @@ class Router
 
         $regex = preg_replace_callback(
             '/\{([^}]+)\}/',
+            
+            //callback to capture param name and store in $paramNames
             function ($matches) use (&$paramNames) {
                 $paramNames[] = $matches[1];
                 return '([^/]+)';

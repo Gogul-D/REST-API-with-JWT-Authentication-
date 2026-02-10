@@ -11,18 +11,18 @@ class Patient
         $this->db = Database::connect();
     }
 
-    /* ============================
-       GET ALL PATIENTS
-    ============================ */
+    
+       //GET ALL PATIENTS
+   
     public function getAll(): array
     {
         $stmt = $this->db->query("SELECT * FROM patients ORDER BY id DESC");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    /* ============================
-       CREATE PATIENT
-    ============================ */
+  
+      // CREATE PATIENT
+    
     public function create(array $data): bool
     {
         $sql = "INSERT INTO patients (name, age, gender, phone, address)
@@ -39,9 +39,9 @@ class Patient
         return $stmt->execute();
     }
 
-    /* ============================
-       UPDATE PATIENT (PARTIAL)
-    ============================ */
+    
+       //UPDATE PATIENT (PARTIAL)
+  
     public function update(int $id, array $data): bool
     {
         if (!$this->exists($id)) {
@@ -72,9 +72,9 @@ class Patient
         return $stmt->execute();
     }
 
-    /* ============================
-       DELETE PATIENT
-    ============================ */
+ 
+       //DELETE PATIENT
+   
     public function delete(int $id): bool
     {
         if (!$this->exists($id)) {
@@ -87,9 +87,9 @@ class Patient
         return $stmt->execute();
     }
 
-    /* ============================
-       CHECK IF PATIENT EXISTS
-    ============================ */
+  
+       //CHECK IF PATIENT EXISTS
+    
     private function exists(int $id): bool
     {
         $stmt = $this->db->prepare("SELECT id FROM patients WHERE id = :id");

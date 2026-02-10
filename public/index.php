@@ -3,76 +3,53 @@
  * --------------------------------------------------
  * SINGLE ENTRY POINT
  * public/index.php
- * --------------------------------------------------
- * Handles:
- * - Environment loading
- * - Middleware
- * - Routing
- * - Controllers
+ * 
+ * Initializes and handles:
+ * - Environment configuration
+ * - Error handling
+ * - Middleware processing
+ * - Request routing
+ * - Controller dispatch
  */
 
 require_once __DIR__ . '/../config/config.php';
 
+//global error handler
 require_once __DIR__ . '/../app/helpers/ErrorHandler.php';
-
 set_exception_handler(['ErrorHandler', 'handleException']);
 
-/*
-|--------------------------------------------------------------------------
-| MIDDLEWARE
-|--------------------------------------------------------------------------
-*/
-require_once __DIR__ . '/../app/middleware/JsonMiddleware.php';
-require_once __DIR__ . '/../app/middleware/AuthMiddleware.php';
-
+//Middleware
+require_once __DIR__ . '/../app/middleware/JsonMiddleware.php';// validates request format
 JsonMiddleware::handle();
+require_once __DIR__ . '/../app/middleware/AuthMiddleware.php';// validates JWT token for protected routes
 
-/*
-|--------------------------------------------------------------------------
-| CORE
-|--------------------------------------------------------------------------
-*/
+//Router 
 require_once __DIR__ . '/../app/core/Router.php';
-
 $router = new Router();
 
-/*
-|--------------------------------------------------------------------------
-| CONTROLLERS
-|--------------------------------------------------------------------------
-*/
+//load controllers
 require_once __DIR__ . '/../app/controllers/AuthController.php';
 require_once __DIR__ . '/../app/controllers/PatientController.php';
 
 $authController     = new AuthController();
 $patientController  = new PatientController();
 
-/*
-|--------------------------------------------------------------------------
-| AUTH ROUTES (PUBLIC)
-|--------------------------------------------------------------------------
-*/
+// AUTH ROUTES (PUBLIC)
+
 $router->add('POST', '/api/register', [$authController, 'register']);
 
 $router->add('POST', '/api/login', [$authController, 'login']);
 
-/*
-|--------------------------------------------------------------------------
-| PATIENT ROUTES (PROTECTED)
-|--------------------------------------------------------------------------
-*/
 
-/**
- * GET ALL PATIENTS
- */
+//protected routes (require authentication)
+
+//GET ALL PATIENTS
 $router->add('GET', '/api/patients', function () use ($patientController) {
     AuthMiddleware::handle();
     $patientController->index();
 });
 
-/**
- * CREATE PATIENT
- */
+//CREATE PATIENT
 $router->add('POST', '/api/patients', function () use ($patientController) {
     AuthMiddleware::handle();
     $patientController->store();
@@ -99,12 +76,27 @@ $router->add('PUT', '/api/patients/{id}', function ($params) use ($patientContro
     $patientController->update($params['id']);
 
 });
+// patch route added
+$router->add('PATCH', '/api/patients/{id}', function ($params) use ($patientController) {
+    AuthMiddleware::handle();
 
-/**
- * DELETE PATIENT
- * Example:
- * DELETE /api/patients/delete?id=1
- */
+    $id = $params['id'] ?? null;
+
+    if (!$id) {
+        http_response_code(400);
+        echo json_encode([
+            "status" => false,
+            "message" => "Patient ID is required"
+        ]);
+        return;
+    }
+
+    $patientController->update($id);
+});
+
+
+//DELETE PATIENT
+
 $router->add('DELETE', '/api/patients/{id}', function ($params) use ($patientController) {
     AuthMiddleware::handle();
 
@@ -122,11 +114,8 @@ $router->add('DELETE', '/api/patients/{id}', function ($params) use ($patientCon
     $patientController->destroy($params['id']);
 });
 
-/*
-|--------------------------------------------------------------------------
-| DISPATCH REQUEST
-|--------------------------------------------------------------------------
-*/
+//DISPATCH REQUEST
+
 $router->dispatch(
     $_SERVER['REQUEST_URI'],
     $_SERVER['REQUEST_METHOD']
