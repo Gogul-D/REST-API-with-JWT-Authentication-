@@ -2,6 +2,8 @@
 
 class JWT
 {
+    private static string $algo = 'sha256';
+
     private static function base64UrlEncode(string $data): string
     {
         return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
@@ -9,21 +11,31 @@ class JWT
 
     private static function base64UrlDecode(string $data): string
     {
+        $remainder = strlen($data) % 4;
+        if ($remainder) {
+            $padLen = 4 - $remainder;
+            $data .= str_repeat('=', $padLen);
+        }
+
         return base64_decode(strtr($data, '-_', '+/'));
     }
 
     /**
-     * Generate JWT token
+     * Generate Access Token
      */
     public static function encode(array $payload): string
     {
+        $secret = $_ENV['JWT_SECRET'] ?? null;
+        $expiry = (int) ($_ENV['JWT_EXPIRY'] ?? 60);
+
+        if (!$secret) {
+            throw new Exception("JWT secret not configured", 500);
+        }
+
         $header = [
             "alg" => "HS256",
             "typ" => "JWT"
         ];
-
-        $secret = $_ENV['JWT_SECRET'];
-        $expiry = (int) $_ENV['JWT_EXPIRY'];
 
         $payload['iat'] = time();
         $payload['exp'] = time() + $expiry;
@@ -32,7 +44,7 @@ class JWT
         $base64Payload = self::base64UrlEncode(json_encode($payload));
 
         $signature = hash_hmac(
-            'sha256',
+            self::$algo,
             $base64Header . "." . $base64Payload,
             $secret,
             true
@@ -44,10 +56,16 @@ class JWT
     }
 
     /**
-     * Decode & validate JWT token
+     * Decode & Validate JWT
      */
     public static function decode(string $token): ?array
     {
+        $secret = $_ENV['JWT_SECRET'] ?? null;
+
+        if (!$secret) {
+            return null;
+        }
+
         $parts = explode('.', $token);
 
         if (count($parts) !== 3) {
@@ -56,19 +74,26 @@ class JWT
 
         [$base64Header, $base64Payload, $base64Signature] = $parts;
 
-        $secret = $_ENV['JWT_SECRET'];
+        $header = json_decode(
+            self::base64UrlDecode($base64Header),
+            true
+        );
 
-        // Recreate signature
-        $signatureCheck = self::base64UrlEncode(
+        if (!$header || ($header['alg'] ?? '') !== 'HS256') {
+            return null;
+        }
+
+        // Verify signature
+        $expectedSignature = self::base64UrlEncode(
             hash_hmac(
-                'sha256',
+                self::$algo,
                 $base64Header . "." . $base64Payload,
                 $secret,
                 true
             )
         );
 
-        if (!hash_equals($base64Signature, $signatureCheck)) {
+        if (!hash_equals($expectedSignature, $base64Signature)) {
             return null;
         }
 
@@ -77,8 +102,12 @@ class JWT
             true
         );
 
-        // Expiry check
-        if ($payload['exp'] < time()) {
+        if (!$payload) {
+            return null;
+        }
+
+        // Expiration check
+        if (!isset($payload['exp']) || $payload['exp'] < time()) {
             return null;
         }
 

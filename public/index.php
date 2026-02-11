@@ -37,8 +37,9 @@ $patientController  = new PatientController();
 // AUTH ROUTES (PUBLIC)
 
 $router->add('POST', '/api/register', [$authController, 'register']);
-
 $router->add('POST', '/api/login', [$authController, 'login']);
+$router->add('POST', '/api/refresh', [$authController, 'refresh']);
+$router->add('POST', '/api/logout', [$authController, 'logout']);
 
 
 //protected routes (require authentication)

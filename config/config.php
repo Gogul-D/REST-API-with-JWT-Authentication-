@@ -1,6 +1,7 @@
 <?php
 // Load .env file manually
 
+
 $envPath = __DIR__ . '/../.env';
 
 if (!file_exists($envPath)) {

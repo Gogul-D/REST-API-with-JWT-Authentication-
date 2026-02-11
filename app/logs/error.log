@@ -1,3 +1,12 @@
 [2026-02-09 12:10:19] Call to undefined method JWT::generateToken() | C:\wamp64\www\project\app\controllers\AuthController.php:61
 [2026-02-09 12:12:44] Call to undefined method JWT::generateToken() | C:\wamp64\www\project\app\controllers\AuthController.php:61
 [2026-02-09 12:12:48] Call to undefined method JWT::generateToken() | C:\wamp64\www\project\app\controllers\AuthController.php:61
+[2026-02-11 05:04:33] Unclosed '{' on line 4 | C:\wamp64\www\project\app\middleware\JsonMiddleware.php:48
+[2026-02-11 05:04:57] Unclosed '{' on line 4 | C:\wamp64\www\project\app\middleware\JsonMiddleware.php:48
+[2026-02-11 05:06:24] Router::add(): Argument #3 ($handler) must be of type callable, array given, called in C:\wamp64\www\project\public\index.php on line 43 | C:\wamp64\www\project\app\core\Router.php:7
+[2026-02-11 05:08:09] Router::add(): Argument #3 ($handler) must be of type callable, array given, called in C:\wamp64\www\project\public\index.php on line 41 | C:\wamp64\www\project\app\core\Router.php:7
+[2026-02-11 05:09:40] Unclosed '{' on line 4 | C:\wamp64\www\project\app\middleware\JsonMiddleware.php:48
+[2026-02-11 05:11:13] Router::add(): Argument #3 ($handler) must be of type callable, array given, called in C:\wamp64\www\project\public\index.php on line 41 | C:\wamp64\www\project\app\core\Router.php:7
+[2026-02-11 09:43:28] Class "AuthController" not found | C:\wamp64\www\project\public\index.php:34
+[2026-02-11 09:44:27] Class "AuthController" not found | C:\wamp64\www\project\public\index.php:34
+[2026-02-11 09:54:54] Class "AuthController" not found | C:\wamp64\www\project\public\index.php:34
